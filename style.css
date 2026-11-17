@@ -1,0 +1,146 @@
+/* ==========================================================================
+   NeuroReflex Clinical Station - Human-Crafted Biomedical Stylesheet
+   Designed for Lab Evaluation, Clean Ergonomics, and Official Print Reports
+   ========================================================================== */
+
+/* Authentic Medical Paper Grid for EMG Oscilloscope */
+.medical-grid-dark {
+  background-color: #070d18;
+  background-image: 
+    linear-gradient(to right, rgba(56, 189, 248, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(56, 189, 248, 0.05) 1px, transparent 1px),
+    linear-gradient(to right, rgba(56, 189, 248, 0.12) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(56, 189, 248, 0.12) 1px, transparent 1px);
+  background-size: 8px 8px, 8px 8px, 40px 40px, 40px 40px;
+}
+
+.medical-grid-light {
+  background-color: #f8fafc;
+  background-image: 
+    linear-gradient(to right, rgba(14, 165, 233, 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(14, 165, 233, 0.07) 1px, transparent 1px),
+    linear-gradient(to right, rgba(14, 165, 233, 0.18) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(14, 165, 233, 0.18) 1px, transparent 1px);
+  background-size: 8px 8px, 8px 8px, 40px 40px, 40px 40px;
+}
+
+/* Subtle, ergonomic scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 9999px;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Stimulator Motor Gentle Vibration Effect */
+@keyframes naturalVibration {
+  0% { transform: translate(0, 0); }
+  20% { transform: translate(-1.5px, 1px); }
+  40% { transform: translate(1px, -1.5px); }
+  60% { transform: translate(-1px, -1px); }
+  80% { transform: translate(1.5px, 1px); }
+  100% { transform: translate(0, 0); }
+}
+
+.stimulus-vibrating {
+  animation: naturalVibration 0.12s infinite linear;
+}
+
+/* Soft Pulsing Dot for Active Session */
+@keyframes softPulse {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); }
+  70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.live-pulse {
+  animation: softPulse 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+/* Toast Notification Animation */
+@keyframes toastSlideIn {
+  from {
+    transform: translateY(16px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.toast-enter {
+  animation: toastSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* --------------------------------------------------------------------------
+   PRINT STYLESHEET (Formats clean A4 summary for lab records/examiners)
+   -------------------------------------------------------------------------- */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-size: 11pt;
+  }
+
+  /* Hide interactive controls, header navigation, demo buttons, and serial terminal */
+  header,
+  footer,
+  #controlsNav,
+  #alarmBanner,
+  #liveTerminalCard,
+  #interactiveDemoCard,
+  #toastContainer,
+  button,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Show dedicated print header */
+  #printHeader {
+    display: block !important;
+    margin-bottom: 24px;
+    border-bottom: 2px solid #0284c7;
+    padding-bottom: 12px;
+  }
+
+  /* Flatten background styling and cards */
+  .card-container,
+  .bg-white,
+  .dark .bg-slate-900 {
+    box-shadow: none !important;
+    border: 1px solid #cbd5e1 !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
+
+  /* Table formatting for paper */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+  th, td {
+    border: 1px solid #e2e8f0 !important;
+    padding: 6px 10px !important;
+    color: #1e293b !important;
+  }
+
+  /* Show examiner signature section */
+  #printSignatures {
+    display: flex !important;
+    justify-content: space-between;
+    margin-top: 40px;
+    padding-top: 20px;
+  }
+}

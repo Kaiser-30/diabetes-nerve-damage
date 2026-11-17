@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Neuropathy & Ischemia Reflex Workstation | PRBL Semester 5</title>
+  
+  <!-- Tailwind CSS CDN with custom typography & colors -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            clinicalBlue: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              500: '#0284c7',
+              600: '#0369a1',
+              700: '#075985',
+              800: '#0c4a6e',
+              900: '#082f49'
+            },
+            labSlate: {
+              50: '#f8fafc',
+              100: '#f1f5f9',
+              200: '#e2e8f0',
+              300: '#cbd5e1',
+              700: '#334155',
+              800: '#1e293b',
+              900: '#0f172a',
+              950: '#020617'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+            mono: ['"JetBrains Mono"', '"SF Mono"', 'Consolas', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts, Lucide Icons, and Chart.js -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="bg-slate-50 dark:bg-labSlate-950 text-slate-800 dark:text-slate-100 min-h-screen flex flex-col font-sans transition-colors duration-200">
+
+  <!-- PRINT REPORT HEADER (Only visible when printing / PDF export) -->
+  <div id="printHeader" class="hidden text-left p-4">
+    <div class="flex justify-between items-start">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900">Diabetic Neuropathy & Peripheral Ischemia Diagnostic Report</h1>
+        <p class="text-xs text-slate-600">PBL Semester 5 Engineering Project &bull; Biomedical Instrumentation &amp; IoT Telemetry</p>
+      </div>
+      <div class="text-right text-xs text-slate-500 font-mono">
+        <div>Date: <span id="printDate">--</span></div>
+        <div>System: ESP32 + AD8232 + KY-013</div>
+      </div>
+    </div>
+    <div class="mt-4 p-3 bg-slate-100 rounded-lg text-xs grid grid-cols-3 gap-2">
+      <div><strong>Subject ID:</strong> <span id="printSubjectId">PT-1042</span></div>
+      <div><strong>Test Site:</strong> <span id="printTestSite">Plantar Surface (Left Foot)</span></div>
+      <div><strong>Evaluator:</strong> Student Research Team</div>
+    </div>
+  </div>
+
+  <!-- APPLICATION NAVIGATION & CONTROLS -->
+  <header class="bg-white dark:bg-labSlate-900 border-b border-slate-200 dark:border-labSlate-800 sticky top-0 z-40 transition-colors shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16 gap-4">
+        
+        <!-- Left: Project Identity -->
+        <div class="flex items-center gap-3">
+          <div class="h-10 w-10 rounded-lg bg-clinicalBlue-600 text-white flex items-center justify-center shadow-sm">
+            <i data-lucide="stethoscope" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-base text-slate-900 dark:text-white tracking-tight">NeuroReflex</span>
+              <span class="text-[11px] font-mono font-medium px-2 py-0.5 rounded-full bg-slate-100 dark:bg-labSlate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-labSlate-700">Lab Station</span>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Diabetic Neuropathy &amp; Ischemia Assessment &bull; PRBL Sem 5</p>
+          </div>
+        </div>
+
+        <!-- Center: Subject Quick Badge (Editable) -->
+        <div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-labSlate-800/80 border border-slate-200 dark:border-labSlate-700 text-xs">
+          <i data-lucide="user" class="w-4 h-4 text-clinicalBlue-600 dark:text-clinicalBlue-400"></i>
+          <span class="text-slate-500 dark:text-slate-400">Subject:</span>
+          <span id="subjectNameDisplay" class="font-semibold text-slate-800 dark:text-slate-200 cursor-pointer hover:underline" title="Click to edit subject info">PT-1042 (Left Foot)</span>
+          <button id="btnEditSubject" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 ml-1">
+            <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+
+        <!-- Right: Connections & Ergonomic Toggles -->
+        <div class="flex items-center gap-2" id="controlsNav">
+          
+          <!-- Connection Status Pill -->
+          <div id="connectionPill" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-mono bg-slate-100 dark:bg-labSlate-800 border border-slate-200 dark:border-labSlate-700">
+            <span id="statusDot" class="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
+            <span id="statusLabel" class="text-slate-600 dark:text-slate-300 font-medium">Port Disconnected</span>
+          </div>
+
+          <!-- WebSerial (USB) Connect Button -->
+          <button id="btnConnectSerial" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-clinicalBlue-600 hover:bg-clinicalBlue-700 text-white font-medium text-xs shadow-sm transition-all">
+            <i data-lucide="usb" class="w-4 h-4"></i>
+            <span id="connectBtnText">Connect USB</span>
+          </button>
+
+          <!-- Wi-Fi IP Button -->
+          <button id="btnOpenWifiModal" class="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-labSlate-800 dark:hover:bg-labSlate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-labSlate-700 transition" title="Wi-Fi / WebSocket Setup">
+            <i data-lucide="wifi" class="w-4 h-4"></i>
+          </button>
+
+          <!-- Presentation Simulation Toggle -->
+          <button id="btnSimulate" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 text-xs font-medium transition" title="Run demonstration for viva without hardware">
+            <i data-lucide="play" class="w-3.5 h-3.5"></i>
+            <span id="simBtnLabel">Simulate Trial</span>
+          </button>
+
+          <!-- Dark / Light Theme Toggle -->
+          <button id="btnToggleTheme" class="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-labSlate-800 dark:hover:bg-labSlate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-labSlate-700 transition" title="Switch Theme">
+            <i id="themeIcon" data-lucide="moon" class="w-4 h-4"></i>
+          </button>
+
+          <!-- Sound Alert Mute/Unmute -->
+          <button id="btnToggleMute" class="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-labSlate-800 dark:hover:bg-labSlate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-labSlate-700 transition" title="Medical Tone Mute">
+            <i id="soundIcon" data-lucide="volume-2" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- ALARM / EVENT BANNER (Shown during active reflex test) -->
+  <div id="alarmBanner" class="hidden bg-rose-600 text-white px-4 py-2.5 shadow-md transition-all">
+    <div class="max-w-7xl mx-auto flex items-center justify-between text-xs sm:text-sm font-medium">
+      <div class="flex items-center gap-2.5">
+        <i data-lucide="alert-octagon" class="w-5 h-5 animate-bounce"></i>
+        <span><strong>ISCHEMIA THRESHOLD DETECTED (&lt; 25.5°C):</strong> Stimulator motor active. Patient reflex test in progress.</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="text-xs bg-black/25 px-2.5 py-1 rounded font-mono font-bold tracking-wider" id="activeTestTimer">0.0s</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN WORKSPACE -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 flex flex-col gap-6 w-full">
+
+    <!-- ROW 1: PRIMARY SENSOR TELEMETRY & REFLEX GAUGES -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      
+      <!-- CARD 1: Skin Temperature -->
+      <div class="bg-white dark:bg-labSlate-900 border border-slate-200 dark:border-labSlate-800 rounded-xl p-5 shadow-sm flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+              <i data-lucide="thermometer" class="w-4 h-4 text-clinicalBlue-500"></i> Skin Temperature
+            </span>
+            <span id="tempBadge" class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+              NORMAL
+            </span>
+          </div>
+
+          <div class="mt-3 flex items-baseline gap-2">
+            <span id="valTempC" class="text-4xl font-bold tracking-tight text-slate-900 dark:text-white font-mono">--.-</span>
+            <span class="text-xl font-medium text-slate-500">°C</span>
+            <span id="valTempF" class="text-xs font-mono text-slate-400 ml-auto">(--.- °F)</span>
+          </div>
+        </div>
+
+        <div class="mt-4 pt-3 border-t border-slate-100 dark:border-labSlate-800 space-y-1.5">
+          <div class="flex justify-between text-xs text-slate-500">
+            <span>Ischemia Trigger:</span>
+            <span class="font-mono font-semibold text-rose-600 dark:text-rose-400">&lt; 25.5 °C</span>
+          </div>
+          <div class="w-full bg-slate-100 dark:bg-labSlate-800 rounded-full h-2 overflow-hidden">
+            <div id="tempBar" class="bg-clinicalBlue-500 h-2 rounded-full transition-all duration-300" style="width: 65%;"></div>
+          </div>
+          <div class="flex justify-between text-[10px] text-slate-400 font-mono">
+            <span>15°C (Ice Test)</span>
+            <span>25.5°C</span>
+            <span>34°C (Normal)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 2: AD8232 Muscle EMG Activity -->
+      <div class="bg-white dark:bg-labSlate-900 border border-slate-200 dark:border-labSlate-800 rounded-xl p-5 shadow-sm flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+              <i data-lucide="zap" class="w-4 h-4 text-emerald-600 dark:text-emerald-400"></i> Muscle EMG (AD8232)
+            </span>
+            <span id="leadsStatusBadge" class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-labSlate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-labSlate-700">
+              STANDBY
+            </span>
+          </div>
+
+          <div class="mt-3 flex items-baseline gap-2">
+            <span id="valEmgRaw" class="text-4xl font-bold tracking-tight text-slate-900 dark:text-white font-mono">----</span>
+            <span class="text-xs text-slate-500 font-mono">ADC / 4095</span>
+          </div>
+        </div>
+
+        <div class="mt-4 pt-3 border-t border-slate-100 dark:border-labSlate-800 space-y-1 text-xs text-slate-500">
+          <div class="flex justify-between items-center">
+            <span>Electrode Contact:</span>
+            <span id="leadsContactText" class="font-mono text-slate-700 dark:text-slate-300">Checking...</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span>Estimated Amplitude:</span>
+            <span id="valEmgVoltage" class="font-mono font-medium text-emerald-600 dark:text-emerald-400">-- mV</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 3: Stimulator Motor & Tactile Switch -->
+      <div class="bg-white dark:bg-labSlate-900 border border-slate-200 dark:border-labSlate-800 rounded-xl p-5 shadow-sm flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+              <i data-lucide="radio" class="w-4 h-4 text-amber-500"></i> Tactile Stimulus
+            </span>
+            <span id="motorBadge" class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-labSlate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-labSlate-700">
+              MOTOR OFF
+            </span>
+          </div>
+
+          <div class="mt-3 flex items-center gap-3">
+            <div id="motorIconBox" class="w-10 h-10 rounded-lg bg-slate-100 dark:bg-labSlate-800 text-slate-500 flex items-center justify-center border border-slate-200 dark:border-labSlate-700 transition">
+              <i data-lucide="disc" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <div id="motorStatusText" class="text-sm font-semibold text-slate-800 dark:text-slate-200">Idle / Awaiting Cold</div>
+              <div class="text-[11px] text-slate-400">GPIO 4 &bull; NPN Base Drive</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 pt-3 border-t border-slate-100 dark:border-labSlate-800 flex items-center justify-between text-xs text-slate-500">
+          <span>Patient Reflex Key:</span>
+          <span id="buttonStateBadge" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-labSlate-800 text-slate-700 dark:text-slate-300 font-mono text-[11px] border border-slate-200 dark:border-labSlate-700">
+            GPIO 27 (Open)
+          </span>
+        </div>
+      </div>
+
+      <!-- CARD 4: Nerve Impairment Score -->
+      <div class="bg-white dark:bg-labSlate-900 border border-slate-200 dark:border-labSlate-800 rounded-xl p-5 shadow-sm flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+              <i data-lucide="activity" class="w-4 h-4 text-indigo-500"></i> Nerve Impairment
+            </span>
+            <span id="impairmentBadge" class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+              OPTIMAL (0%)
+            </span>
+          </div>
+
+          <div class="mt-3 flex items-baseline gap-2">
+            <span id="valNerveDamage" class="text-4xl font-bold tracking-tight text-slate-900 dark:text-white font-mono">0</span>
+            <span class="text-2xl font-bold text-slate-400">%</span>
+            <span id="valReflexDelayText" class="text-xs font-mono text-slate-400 ml-auto">Delay: -- s</span>
+          </div>
+        </div>
+
+        <div class="mt-4 pt-3 border-t border-slate-100 dark:border-labSlate-800 space-y-1.5">
+          <div class="flex justify-between text-xs text-slate-500">
+            <span>Assessment:</span>
+            <span id="impairmentSeverityText" class="font-medium text-slate-700 dark:text-slate-300 font-mono">Normal Reflex</span>
+          </div>
+          <div class="w-full bg-slate-100 dark:bg-labSlate-800 rounded-full h-2 overflow-hidden">
+            <div id="impairmentBar" class="bg-emerald-500 h-2 rounded-full transition-all duration-300" style="width: 0%;"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ROW 2: PHYSIOLOGICAL GRAPHS (EMG BIO-TRACE & TEMPERATURE TREND) -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- EMG Real-Time Waveform Monitor (2 Columns) -->
+      <div class="lg:col-span-2 bg-white dark:bg-labSlate-900 border border-slate-200 dark:border-labSlate-800 rounded-xl p-5 shadow-sm flex flex-col">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 live-pulse"></span>
+            <h2 class="text-sm font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-1.5">
+              <span>Electromyography (EMG) Muscle Potential Monitor</span>
+            </h2>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-labSlate-800 text-slate-500 border border-slate-200 dark:border-labSlate-700">100Hz</span>
+          </div>
+
+          <div class="flex items-center gap-1.5 no-print">
+            <button id="btnFreezeTrace" class="px-2.5 py-1 text-xs rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-labSlate-800 dark:hover:bg-labSlate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-labSlate-700 flex items-center gap-1 transition">
+              <i data-lucide="pause" class="w-3.5 h-3.5"></i> <span id="freezeBtnText">Freeze Trace</span>
+            </button>
+            <button id="btnResetTrace" class="px-2.5 py-1 text-xs rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-labSlate-800 dark:hover:bg-labSlate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-labSlate-700 flex items-center gap-1 transition" title="Clear Waveform">
+              <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> <span>Reset</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Waveform Canvas Box -->
+        <div id="emgCanvasContainer" class="relative w-full h-64 rounded-lg border border-slate-200 dark:border-labSlate-800 overflow-hidden flex items-center justify-center medical-grid-light dark:medical-grid-dark transition-colors">
+          <canvas id="emgChart" class="w-full h-full"></canvas>
+          
+          <!-- Lead-Off Overlay Notice -->
+          <div id="leadOffNotice" class="hidden absolute inset-0 bg-white/90 dark:bg-labSlate-950/90 backdrop-blur-xs flex flex-col items-center justify-center gap-1.5 text-slate-600 dark:text-slate-300">
+            <i data-lucide="alert-triangle" class="w-7 h-7 text-amber-500"></i>
+            <span class="font-mono text-xs font-bold text-amber-600 dark:text-amber-400">AD8232 LEADS DISCONNECTED</span>
+            <span class="text-[11px] text-slate-500">Check electrode skin contact on Red (RA), Yellow (LA), and Green (RL) pads</span>
+          </div>
+        </div>
+
+        <div class="mt-3 flex items-center justify-between text-xs text-slate-500 font-mono">
+          <div class="flex items-center gap-4">
+            <span class="flex items-center gap-1.5">
+              <span class="w-2.5 h-1 rounded bg-emerald-500"></span> Bio-potential Trace
+            </span>
+            <span class="flex items-center gap-1.5">
+              <span class="w-2.5 h-0.5 bg-slate-400 dark:bg-slate-600"></span> Zero Baseline (2048)
+            </span>
+          </div>
+          <div>Filter: 20-sample moving average window</div>
+        </div>
+      </div>
+
+      <!-- Temperature Trend Graph (1 Column) -->
+      <div class="bg-white dark:bg-labSlate-900 border border-slate-200 dark:border-labSlate-800 rounded-xl p-5 shadow-sm flex flex-col justify-between">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-1.5">
+            <i data-lucide="line-chart" class="w-4 h-4 text-clinicalBlue-500"></i>
+            Skin Temperature Trend
+          </h2>
+          <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-labSlate-800 text-slate-500 border border-slate-200 dark:border-labSlate-700">1 Hz</span>
+        </div>
+
+        <!-- Temp Canvas -->
+        <div class="w-full h-56 rounded-lg border border-slate-200 dark:border-labSlate-800 p-2 bg-slate-50 dark:bg-labSlate-950">
+          <canvas id="tempChart" class="w-full h-full"></canvas>
+        </div>
+
+        <div class="mt-3 pt-3 border-t border-slate-100 dark:border-labSlate-800 flex items-center justify-between text-xs text-slate-500">
+          <div class="flex items-center gap-1.5 text-rose-600 dark:text-rose-400 font-medium">
+            <span class="w-2 h-0.5 bg-rose-500"></span> Threshold: 25.5°C
+          </div>
+          <div class="font-mono text-slate-400 text-[11px]">
+            Offset applied: -7.0°C
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ROW 3: PROTOCOL DETAILS, CLINICAL LOGS, & PRINTABLE TRIAL RECORDS -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- Protocol & Examination Procedure Card (1 Column) -->
+      <div class="bg-white dark:bg-labSlate-900 border border-slate-200 dark:border-labSlate-800 rounded-xl p-5 shadow-sm flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-sm font-bold text-slate-900 dark:text-white">Diagnostic Protocol Guide</h3>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-clinicalBlue-50 dark:bg-clinicalBlue-950/50 text-clinicalBlue-600 dark:text-clinicalBlue-400 border border-clinicalBlue-200 dark:border-clinicalBlue-800">
+              PRBL Protocol
+            </span>
+          </div>
+
+          <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-3">
+            Testing sequence evaluates both vascular response and somatosensory nerve conduction:
+          </p>
+
+          <ol class="space-y-2 text-xs text-slate-600 dark:text-slate-400">
+            <li class="flex items-start gap-2">
+              <span class="w-4 h-4 rounded-full bg-slate-100 dark:bg-labSlate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">1</span>
+              <span><strong>Cooling Test:</strong> Ice pack/water applied until thermistor reads &lt;25.5°C.</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="w-4 h-4 rounded-full bg-slate-100 dark:bg-labSlate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">2</span>
+              <span><strong>Vibration Stimulus:</strong> Motor on GPIO 4 activates automatically.</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="w-4 h-4 rounded-full bg-slate-100 dark:bg-labSlate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">3</span>
+              <span><strong>Reflex Response:</strong> Patient presses switch when vibration is felt.</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="w-4 h-4 rounded-full bg-slate-100 dark:bg-labSlate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">4</span>
+              <span><strong>Re-Arming:</strong> System waits for temperature &ge;25.5°C before next trial.</span>
+            </li>
+          </ol>
+
+          <!-- Interactive Trial Simulators for Viva / Presentation (no-print) -->
+          <div id="interactiveDemoCard" class="mt-4 pt-3 border-t border-slate-100 dark:border-labSlate-800 space-y-2 no-print">
+            <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">Presentation Manual Triggers</span>
+            <div class="grid grid-cols-2 gap-2">
+              <button id="btnTriggerColdSim" class="py-1.5 px-2.5 text-xs font-medium rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 flex items-center justify-center gap-1.5 transition">
+                <i data-lucide="snowflake" class="w-3.5 h-3.5"></i> Trigger Cold
+              </button>
+              <button id="btnPressButtonSim" class="py-1.5 px-2.5 text-xs font-medium rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center gap-1.5 transition">
+                <i data-lucide="hand" class="w-3.5 h-3.5"></i> Press Button
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 pt-3 border-t border-slate-100 dark:border-labSlate-800 flex items-center justify-between text-xs text-slate-500">
+          <span>System State:</span>
+          <span id="reArmStatusText" class="font-mono font-medium text-emerald-600 dark:text-emerald-400">ARMED &amp; MONITORING</span>
+        </div>
+      </div>
+
+      <!-- Clinical Trial Records Table (2 Columns) -->
+      <div class="lg:col-span-2 bg-white dark:bg-labSlate-900 border border-slate-200 dark:border-labSlate-800 rounded-xl p-5 shadow-sm flex flex-col justify-between">
+        <div>
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+            <div class="flex items-center gap-2">
+              <h3 class="text-sm font-bold text-slate-900 dark:text-white">Trial Examination Records</h3>
+              <span id="recordBadge" class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-100 dark:bg-labSlate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-labSlate-700">0 Trials</span>
+            </div>
+
+            <!-- Table Actions: Print, CSV, Clear -->
+            <div class="flex items-center gap-1.5 no-print">
+              <button id="btnPrintReport" class="px-2.5 py-1 text-xs rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-labSlate-800 dark:hover:bg-labSlate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-labSlate-700 flex items-center gap-1 transition" title="Print Official Report">
+                <i data-lucide="printer" class="w-3.5 h-3.5"></i> <span>Print Report</span>
+              </button>
+              <button id="btnExportCsv" class="px-2.5 py-1 text-xs rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-labSlate-800 dark:hover:bg-labSlate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-labSlate-700 flex items-center gap-1 transition">
+                <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i> <span>Export CSV</span>
+              </button>
+              <button id="btnClearTable" class="px-2.5 py-1 text-xs rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-labSlate-800 dark:hover:bg-labSlate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-labSlate-700 flex items-center gap-1 transition">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> <span>Clear</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Table Container -->
+          <div class="overflow-x-auto border border-slate-200 dark:border-labSlate-800 rounded-lg max-h-48 overflow-y-auto">
+            <table class="w-full text-left text-xs font-mono">
+              <thead class="bg-slate-50 dark:bg-labSlate-800/80 text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-labSlate-700 sticky top-0">
+                <tr>
+                  <th class="py-2 px-3">#</th>
+                  <th class="py-2 px-3">Time</th>
+                  <th class="py-2 px-3">Temp</th>
+                  <th class="py-2 px-3">Reflex Delay</th>
+                  <th class="py-2 px-3">Impairment</th>
+                  <th class="py-2 px-3">Interpretation</th>
+                </tr>
+              </thead>
+              <tbody id="trialTableBody" class="divide-y divide-slate-100 dark:divide-labSlate-800 text-slate-700 dark:text-slate-300">
+                <tr id="emptyRow">
+                  <td colspan="6" class="py-6 text-center text-slate-400 font-sans">
+                    No trials recorded in current session. Trigger a reflex test to populate.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Serial Terminal Drawer Toggle (Collapsible) -->
+        <div id="liveTerminalCard" class="mt-4 pt-3 border-t border-slate-100 dark:border-labSlate-800 no-print">
+          <div class="flex items-center justify-between mb-1.5">
+            <button id="btnToggleTerminal" class="text-xs font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 flex items-center gap-1 transition">
+              <i data-lucide="terminal" class="w-3.5 h-3.5 text-clinicalBlue-500"></i>
+              <span>Hardware Serial Diagnostics (115200 Baud)</span>
+              <i id="terminalChevron" data-lucide="chevron-down" class="w-3.5 h-3.5 transition-transform"></i>
+            </button>
+            <span class="text-[10px] text-slate-400 font-mono">COM Console</span>
+          </div>
+
+          <div id="serialConsoleBox" class="h-20 w-full bg-slate-900 dark:bg-black font-mono text-[11px] text-emerald-400 p-2.5 rounded-lg border border-slate-800 overflow-y-auto leading-relaxed select-text">
+            <div class="text-slate-500">// Serial port output will display here when ESP32 is connected...</div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- PRINT ONLY: EVALUATION SIGNATURE BLOCK -->
+    <div id="printSignatures" class="hidden text-xs text-slate-700">
+      <div>
+        <div class="border-t border-slate-400 w-48 pt-1 text-center font-semibold">Student / Researcher Signature</div>
+      </div>
+      <div>
+        <div class="border-t border-slate-400 w-48 pt-1 text-center font-semibold">Faculty / Evaluator Signature</div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- SUBJECT METADATA EDIT MODAL -->
+  <div id="subjectModal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-labSlate-900 border border-slate-200 dark:border-labSlate-800 rounded-xl max-w-sm w-full p-5 shadow-xl space-y-3">
+      <div class="flex items-center justify-between border-b border-slate-200 dark:border-labSlate-800 pb-2">
+        <h4 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          <i data-lucide="user-check" class="w-4 h-4 text-clinicalBlue-500"></i> Subject Details
+        </h4>
+        <button id="btnCloseSubjectModal" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="space-y-2 text-xs">
+        <div>
+          <label class="block text-slate-600 dark:text-slate-400 font-medium mb-1">Subject ID / Name</label>
+          <input type="text" id="inputSubjectId" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-labSlate-700 bg-slate-50 dark:bg-labSlate-950 font-mono text-slate-800 dark:text-slate-100" value="PT-1042" />
+        </div>
+        <div>
+          <label class="block text-slate-600 dark:text-slate-400 font-medium mb-1">Test Location</label>
+          <select id="selectTestSite" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-labSlate-700 bg-slate-50 dark:bg-labSlate-950 text-slate-800 dark:text-slate-100">
+            <option value="Plantar Surface (Left Foot)">Plantar Surface (Left Foot)</option>
+            <option value="Plantar Surface (Right Foot)">Plantar Surface (Right Foot)</option>
+            <option value="Great Toe / Hallux">Great Toe / Hallux</option>
+            <option value="Palmar Surface (Hand)">Palmar Surface (Hand)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-labSlate-800">
+        <button id="btnSaveSubject" class="px-3 py-1.5 text-xs rounded-lg bg-clinicalBlue-600 hover:bg-clinicalBlue-700 text-white font-medium">
+          Save Details
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- WI-FI CONNECTION MODAL -->
+  <div id="wifiModal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-labSlate-900 border border-slate-200 dark:border-labSlate-800 rounded-xl max-w-sm w-full p-5 shadow-xl space-y-3">
+      <div class="flex items-center justify-between border-b border-slate-200 dark:border-labSlate-800 pb-2">
+        <h4 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          <i data-lucide="wifi" class="w-4 h-4 text-clinicalBlue-500"></i> ESP32 Wi-Fi Setup
+        </h4>
+        <button id="btnCloseWifiModal" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <p class="text-xs text-slate-500">
+        Connect to ESP32 hotspot (<code>NeuroScan_ESP32</code>) or enter its local IP:
+      </p>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">ESP32 IP Address</label>
+        <input type="text" id="inputEspIp" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-labSlate-700 bg-slate-50 dark:bg-labSlate-950 font-mono text-xs text-slate-800 dark:text-slate-100" value="192.168.4.1" />
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-labSlate-800">
+        <button id="btnConnectWifi" class="px-3 py-1.5 text-xs rounded-lg bg-clinicalBlue-600 hover:bg-clinicalBlue-700 text-white font-medium flex items-center gap-1">
+          <i data-lucide="check" class="w-3.5 h-3.5"></i> Connect WebSocket
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FLOATING TOAST NOTIFICATION CONTAINER -->
+  <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- FOOTER -->
+  <footer class="bg-white dark:bg-labSlate-900 border-t border-slate-200 dark:border-labSlate-800 py-3 px-4 text-xs text-slate-500 transition-colors no-print">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-clinicalBlue-500"></span>
+        <span>PRBL Sem 5 &bull; Department of Biomedical &amp; Electronics Engineering</span>
+      </div>
+      <div class="font-mono text-[11px] text-slate-400">
+        Pins: Motor(GPIO4) &bull; Button(GPIO27) &bull; Thermistor(GPIO34) &bull; EMG(GPIO35)
+      </div>
+    </div>
+  </footer>
+
+  <!-- Human-Crafted Application Script -->
+  <script src="app.js"></script>
+</body>
+</html>
