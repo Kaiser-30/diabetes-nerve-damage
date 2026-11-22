@@ -424,7 +424,7 @@ function updateDashboardUI() {
     ui.leadsStatusBadge.className = 'text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800';
     ui.leadsContactText.textContent = 'Contact Established';
     ui.leadsContactText.className = 'font-mono text-emerald-600 dark:text-emerald-400';
-    
+
     // Approximate amplitude in mV
     const mv = ((state.emgRaw / 4095.0) * 3.3 * 1000).toFixed(0);
     ui.valEmgVoltage.textContent = `${mv} mV`;
@@ -826,7 +826,7 @@ function startSimulation() {
   let tick = 0;
   state.simTimer = setInterval(() => {
     tick++;
-    
+
     // Simulate biological baseline with minor noise
     if (state.electrodesConnected) {
       const base = 2048;
